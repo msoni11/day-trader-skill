@@ -42,13 +42,13 @@ import subprocess
 import sys
 import urllib.error
 import urllib.request
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as IST
 import zipfile
 
 INDEX_URL = "https://disclosures-clerk.house.gov/public_disc/financial-pdfs/%d%s.zip"
 PTR_URL = "https://disclosures-clerk.house.gov/public_disc/ptr-pdfs/%d/%s.pdf"
 FD_URL = "https://disclosures-clerk.house.gov/public_disc/financial-pdfs/%d/%s.pdf"
-UA = "day-trader-skill/2.0 (+https://github.com/Jakeschincariol/day-trader-skill)"
+UA = "day-trader-skill/2.0 (+https://github.com/msoni11/day-trader-skill)"
 FILING_TYPES = {
     "P": "Periodic Transaction Report", "O": "Annual report", "A": "Amendment",
     "C": "Candidate report", "X": "Extension", "T": "Termination report",
