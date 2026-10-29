@@ -95,7 +95,8 @@ MIN_DAILY_BARS = 30
 DEFAULT_UNIVERSE = "trader/universe.txt"
 NOTE = "A scan is a list of charts that match a rule, not a list of stocks to buy."
 
-NSE_HOLIDAYS = {   # NSE equity and F&O trading holidays on weekdays (NSE circular for 2026)
+NSE_HOLIDAYS = {   # NSE equity and F&O trading holidays on weekdays (NSE holiday master, 2026, capital market)
+    "2026-01-15": "Municipal Corporation Election - Maharashtra",
     "2026-01-26": "Republic Day",
     "2026-03-03": "Holi",
     "2026-03-26": "Shri Ram Navami",
@@ -874,7 +875,7 @@ def cmd_daily(a):
     else:
         print("No setups.")
     for h in hits[:a.show]:
-        print("  %-6s %10s  RSI %5.1f  %s" % (h["symbol"], money(h["price"]), h["rsi"],
+        print("  %-10s %12s  RSI %5.1f  %s" % (h["symbol"], money(h["price"]), h["rsi"],
                                               ", ".join(LABEL[t] for t in h["setups"])))
     if len(hits) > a.show:
         print("  ... and %d more in the watchlist (--show N for more)." % (len(hits) - a.show))
@@ -961,7 +962,7 @@ def cmd_orb(a):
               % (len(hits), ("the %s checked" % "{:,}".format(counts["confirmed"])) if counts["unconfirmed"]
                  else "{:,}".format(counts["scanned"]), clock_label(cutoff)))
         for h in hits[:a.show]:
-            print("  %8s  %-6s %10s  range %s to %s  %+.2f%% over" % (
+            print("  %8s  %-10s %12s  range %s to %s  %+.2f%% over" % (
                 h["at"], h["symbol"], money(h["price"]), _p(h["or_low"]), _p(h["or_high"]), h["pct_over"]))
         if len(hits) > a.show:
             print("  ... and %d more in the watchlist (--show N for more)." % (len(hits) - a.show))

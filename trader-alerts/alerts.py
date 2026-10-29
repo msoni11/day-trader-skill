@@ -69,7 +69,8 @@ BACKOFF = 2.0  # seconds to wait before the one retry after a 429
 YAHOO_HOSTS = ("query2.finance.yahoo.com", "query1.finance.yahoo.com")
 HHMM = re.compile(r"^([01]?\d|2[0-3]):([0-5]\d)$")
 
-NSE_HOLIDAYS = {   # NSE equity and F&O trading holidays on weekdays (NSE circular for 2026)
+NSE_HOLIDAYS = {   # NSE equity and F&O trading holidays on weekdays (NSE holiday master, 2026, capital market)
+    "2026-01-15": "Municipal Corporation Election - Maharashtra",
     "2026-01-26": "Republic Day",
     "2026-03-03": "Holi",
     "2026-03-26": "Shri Ram Navami",
@@ -591,9 +592,9 @@ def cmd_check(a):
         for e in errors:
             print("error: " + e)
         if rings:
-            print("An alert is information, not an order. A bracket's stop-loss and take-profit already sit at "
-                  "the broker: check get_open_position and record any fill (ticket.py fill). To close a "
-                  "position yourself: ticket.py flatten, then trader-risk and your yes.")
+            print("An alert is information, not an order. If your stop-loss or target order filled at the broker, "
+                  "cancel the other one now and record the fill (ticket.py fill). To close a position "
+                  "yourself: ticket.py flatten, then trader-risk and your yes.")
     return 0 if rings else 1
 
 

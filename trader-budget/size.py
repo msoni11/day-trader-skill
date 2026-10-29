@@ -62,7 +62,7 @@ list of stocks by weight.
                    weight, again and again until nobody is over
   4. min order     a slice under min_order_inr is dropped and its weight
                    shared out, so you never place a Rs 2 order
-  5. rounding      whole rupees by default (--cents for cents); the rounding
+  5. rounding      whole rupees by default (--cents for paise); the rounding
                    rupee goes to the biggest position that is not capped
   6. whole shares  with --whole-shares or "fractional": false; needs prices
 
@@ -225,7 +225,7 @@ def parse_weights(data):
 
 
 def weights_from_arg(text):
-    """AAPL=22.04,AXP=17.14 -> {ticker: weight}"""
+    """HDFCBANK=30,RELIANCE=25 -> {ticker: weight}"""
     out = {}
     for part in text.split(","):
         part = part.strip()
@@ -298,7 +298,7 @@ def _price(x):
 
 
 def _num(x):
-    """1250 -> "1250", 1118.13 -> "1118.13" (Alpaca wants these as strings)."""
+    """1250 -> "1250", 1118.13 -> "1118.13" (orders carry them as strings)."""
     x = round(float(x), 2)
     if abs(x - round(x)) < 0.005:
         return str(int(round(x)))
@@ -472,7 +472,7 @@ def size_trade(plan, cfg, budget=None, limit=None, price=None, cash=None, today=
 
 
 def bracket_order(s):
-    """The one proposed order, Alpaca place_stock_order fields (strings) plus why and plan."""
+    """The one proposed order (prices as strings) plus why and plan."""
     if s["refusal"] or s["qty"] <= 0:
         return None
     o = {"symbol": s["symbol"], "exchange": s["exchange"], "side": "buy", "qty": str(int(s["qty"])),
@@ -749,7 +749,7 @@ def size(rows, cfg, budget=None, prices=None, whole=None, cents=False, top=None)
 
 
 def orders_from(result, source=""):
-    """Weights mode: proposed buy orders, one per position, in place_stock_order shape."""
+    """Weights mode: proposed buy orders, one per position, delivery (CNC) on NSE."""
     out = []
     for p in result["positions"]:
         if p["dollars"] <= 0:
@@ -759,12 +759,12 @@ def orders_from(result, source=""):
             why = "%s, weights from %s" % (why, source)
         if p["capped"]:
             why += "; capped at %s%% of the %s budget" % (_num(result["max_position_pct"]), money(result["budget"]))
-        o = {"symbol": p["ticker"], "side": "buy"}
+        o = {"symbol": p["ticker"], "exchange": "NSE", "side": "buy"}
         if result["whole_shares"]:
             o["qty"] = str(int(p["shares"]))
         else:
             o["notional"] = _num(p["dollars"])
-        o.update({"type": "market", "time_in_force": "day", "why": why})
+        o.update({"type": "market", "product": "CNC", "time_in_force": "day", "why": why})
         out.append(o)
     return out
 
@@ -780,7 +780,7 @@ def report(result, orders, source=""):
                     money(r["investable"]), _num(r["max_position_pct"]), money(r["cap"])))
     lines.append("")
     has_price = any("price" in p for p in r["positions"])
-    head = "%-7s %-22s %8s %11s" % ("ticker", "name", "weight", "dollars")
+    head = "%-7s %-22s %8s %11s" % ("ticker", "name", "weight", "rupees")
     if has_price:
         head += " %10s %10s" % ("price", "shares")
     lines.append(head + "  note")
@@ -802,7 +802,7 @@ def report(result, orders, source=""):
     for d in r["dropped"]:
         lines.append("Dropped %s: %s" % (d["ticker"], d["reason"]))
     lines.append("")
-    lines.append("Proposed orders (place_stock_order arguments, nothing has been placed):")
+    lines.append("Proposed orders (delivery, CNC; nothing has been placed):")
     for o in orders:
         amount = ("notional \"%s\"" % o["notional"]) if "notional" in o else ("qty \"%s\"" % o["qty"])
         lines.append("  %s %s %s, %s, %s" % (o["side"], o["symbol"], amount, o["type"], o["time_in_force"]))
@@ -930,7 +930,7 @@ def main(argv=None):
     g.add_argument("--targets", help="a weights file: {\"weights\": [{\"ticker\", \"weight\"}]}")
     g.add_argument("--top", type=int, help="keep only the N biggest weights")
     g.add_argument("--whole-shares", action="store_true", help="whole shares only (needs --prices)")
-    g.add_argument("--cents", action="store_true", help="size to the cent instead of whole rupees")
+    g.add_argument("--cents", action="store_true", help="size to the paisa instead of whole rupees")
     a = ap.parse_args(argv)
     try:
         cfg = load_config(a.config)

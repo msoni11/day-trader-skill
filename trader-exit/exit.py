@@ -72,7 +72,8 @@ CENT = Decimal("0.01")
 EPOCH = datetime.datetime(1970, 1, 1)
 NOTE = "A stop is a plan, not a guarantee: a gap or a fast market can fill past it."
 
-NSE_HOLIDAYS = {   # NSE equity and F&O trading holidays on weekdays (NSE circular for 2026)
+NSE_HOLIDAYS = {   # NSE equity and F&O trading holidays on weekdays (NSE holiday master, 2026, capital market)
+    "2026-01-15": "Municipal Corporation Election - Maharashtra",
     "2026-01-26": "Republic Day",
     "2026-03-03": "Holi",
     "2026-03-26": "Shri Ram Navami",
@@ -143,7 +144,7 @@ def parse_now(text):
 def parse_hhmm(text, what):
     m = re.match(r"^\s*(\d{1,2}):(\d{2})\s*$", str(text))
     if not m or int(m.group(1)) > 23 or int(m.group(2)) > 59:
-        raise PlanError("%s wants an IST time like 15:55, not %r" % (what, text))
+        raise PlanError("%s wants an IST time like 15:10, not %r" % (what, text))
     return datetime.time(int(m.group(1)), int(m.group(2)))
 
 

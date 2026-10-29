@@ -95,7 +95,8 @@ FRESH_MINUTES = 15
 REF_WORDS = {"plan": "the plan's entry", "price": "the latest price", "limit": "the limit price",
              "stop price": "the stop price", "stale price": "an old price"}
 
-NSE_HOLIDAYS = {   # NSE equity and F&O trading holidays on weekdays (NSE circular for 2026)
+NSE_HOLIDAYS = {   # NSE equity and F&O trading holidays on weekdays (NSE holiday master, 2026, capital market)
+    "2026-01-15": "Municipal Corporation Election - Maharashtra",
     "2026-01-26": "Republic Day",
     "2026-03-03": "Holi",
     "2026-03-26": "Shri Ram Navami",

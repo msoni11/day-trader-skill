@@ -79,7 +79,8 @@ INTERVALS = {"1m": 60, "5m": 300}
 DEFAULTS = {"no_entries_before": "09:30", "no_entries_after": "14:45"}
 EPOCH = datetime.datetime(1970, 1, 1)
 
-NSE_HOLIDAYS = {   # NSE equity and F&O trading holidays on weekdays (NSE circular for 2026)
+NSE_HOLIDAYS = {   # NSE equity and F&O trading holidays on weekdays (NSE holiday master, 2026, capital market)
+    "2026-01-15": "Municipal Corporation Election - Maharashtra",
     "2026-01-26": "Republic Day",
     "2026-03-03": "Holi",
     "2026-03-26": "Shri Ram Navami",

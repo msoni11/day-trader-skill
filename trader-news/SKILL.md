@@ -1,104 +1,95 @@
 ---
 name: trader-news
 description: >-
-  News Monitor. Tracks breaking news on every stock you watch and flags what
-  moves it: Yahoo Finance headlines per ticker, each company's 8-K filings on
-  SEC EDGAR (earnings, CEO changes, deals, restatements, bankruptcy) and how
-  far each stock is from yesterday's close. Shows only what is new since the
-  last check, newest first, in New York time, tags each item (earnings,
-  analyst, deal, halt, regulatory, macro...) and never repeats one. Use when
-  the user says "any news on TSLA", "why is this moving", "what's the news on
-  my watchlist", "morning briefing", "pre-market news", "monitor the news",
-  "did anything break", "check the 8-Ks", or after /trader-scanner finds setups.
-argument-hint: "[tickers]"
+  News Monitor for NSE stocks. Tracks breaking news on every stock you watch
+  and flags what moves it: Indian business headlines per company from Google
+  News India (Economic Times, Moneycontrol, Mint, Business Standard,
+  CNBC-TV18, Reuters...), market-wide news (NIFTY, Sensex, RBI, SEBI, FII
+  flows) with --market, and how far each stock is from yesterday's close.
+  Shows only what is new since the last check, newest first, in IST, tags each
+  item (results, analyst, deal, capital, insider, circuit, regulatory,
+  macro...) and never repeats one. Use when the user says "any news on
+  RELIANCE", "why is this moving", "what's the news on my watchlist",
+  "morning briefing", "pre-market news", "monitor the news", "did anything
+  break", or after /trader-scanner finds setups.
+argument-hint: "[--tickers RELIANCE TCS] [--market]"
 ---
 
 # trader-news
 
-A chart can look perfect and still be about to gap on an earnings date, a
-halt or a lawsuit. Before a setup becomes a trade, this skill reads the two
-feeds that carry those first, for every stock on the watchlist, and tells you
-only what is new. It also prints how far each stock has moved today, so a
-headline and a move sit side by side.
+Headlines first, then the user decides. The News Monitor finds what is new
+on the stocks the user watches and says why it might matter. A headline is a
+lead, not a fact: open the story before acting on it.
 
-Tool in this folder (standard library Python, no keys):
+`${CLAUDE_SKILL_DIR}` below is this skill's folder (where this SKILL.md lives).
 
 ```bash
-python3 "${CLAUDE_SKILL_DIR}/news.py"                         # watchlist + plan + portfolio
-python3 "${CLAUDE_SKILL_DIR}/news.py" --tickers TSLA NVDA --hours 12
-python3 "${CLAUDE_SKILL_DIR}/news.py" --no-sec --json
+python3 "${CLAUDE_SKILL_DIR}/news.py"                               # watchlist + plan + portfolio
+python3 "${CLAUDE_SKILL_DIR}/news.py" --tickers RELIANCE TCS M&M
+python3 "${CLAUDE_SKILL_DIR}/news.py" --market                      # also NIFTY, Sensex, RBI, SEBI, FIIs
+python3 "${CLAUDE_SKILL_DIR}/news.py" --tickers INFY --all --hours 72
+python3 "${CLAUDE_SKILL_DIR}/news.py" --name "M&M=Mahindra & Mahindra" --tickers M&M
 ```
 
-## What it reads and writes
+Other flags: `--no-moves`, `--move-pct 3`, `--json`, `--dry-run`, `--offline DIR`,
+`--now ISO`. State: `trader/state/news.json` (30 days), so an item shows once.
 
-| file / feed | what |
-| --- | --- |
-| `--tickers`, else `trader/watchlist.json` | the scanner's hits (trader-scanner) |
-| `trader/plan.json` | the trade you are planning (trader-exit) |
-| `trader/portfolio.json` | what you hold (trader-broker records fills there) |
-| Yahoo Finance headline RSS | `https://feeds.finance.yahoo.com/rss/2.0/headline?s=TSLA&region=US&lang=en-US` |
-| Yahoo Finance chart endpoint | the last price against yesterday's close (unofficial, can lag) |
-| SEC EDGAR company Atom feed | 8-K by default (`--forms 8-K,10-Q` for more); needs `sec_user_agent` in `trader/config.json` or `SEC_USER_AGENT`, else filings are skipped with a note |
-| `trader/state/news.json` | what has been shown (kept 30 days) and each ticker's CIK |
+## Where it looks
 
-## The rules
-
-- **Headlines are leads, not facts.** Before telling the user something
-  happened, open the story or the filing and read it. Quote the source and
-  link it. Never summarise a paywalled story you could not read: say so.
-- **Filings beat headlines.** If an 8-K and a headline disagree, the 8-K is
-  what the company told the SEC.
-- **Say what it touches.** Every item lists the tickers it touches and its
-  tags: earnings, analyst, legal, deal, capital, people, risk, halt,
-  regulatory, macro. Filings marked `!` carry an important 8-K item: earnings
-  results (2.02), an officer change (5.02), an impairment (2.06), a delisting
-  notice (3.01), past financials no longer reliable (4.02), bankruptcy (1.03)
-  or a cyber incident (1.05).
-- **MOVING** marks a stock 3 % or more from yesterday's close (`--move-pct`).
-  A move with no headline is worth saying out loud too.
-- **No predictions.** Report what was published and how far the price is from
-  yesterday's close. Never say what the stock will do next.
+- **Headlines:** Google News RSS, India edition, searched by the company's name
+  (from `trader/universe.txt` or the scanner's bundled NIFTY 50 list; give
+  `--name SYM=Name` for anything else). Each item keeps its own source.
+- **The move:** the last price against yesterday's close (Yahoo, `.NS`).
+  3 % or more is flagged MOVING.
+- **Exchange filings** (results, board meetings, dividends, bonus and split
+  record dates, SAST and insider disclosures) are on nseindia.com and
+  bseindia.com under Corporate Filings; those sites do not serve scripts.
+  If the user wants them, open the company's announcements page in a browser
+  for them, or use `/trader-insider` for insider and bulk / block deals.
 
 ## Steps
 
-1. Run the check: `python3 "${CLAUDE_SKILL_DIR}/news.py"`. Exit code 1 means
-   nothing new. `--all` shows items already seen, `--json` gives everything
-   machine readable, `--dry-run` leaves the state alone.
-2. Read the items that matter: every `!` filing, anything tagged earnings,
-   halt, legal, regulatory or risk, and every MOVING ticker first.
-3. Write a short brief, per ticker: what happened, the source and link, the
-   move, and one line on why it matters to the setup (for example "earnings
-   are this week: an overnight gap can jump past any stop").
-4. If a story changes the picture, say so before `/trader-entry` and
-   `/trader-exit`: an earnings date inside the trade, a halt, an offering.
-   Never act on a headline alone.
-
-During the session: `/loop 15m /trader-news`, or a scheduled task each
-morning before the open.
+1. Run `news.py` (or with `--tickers`). Add `--market` before the open.
+2. Lead with any ticker flagged MOVING and any item that touches the user's
+   holdings. Then the rest, newest first, one line each: time IST, source, title, tags.
+3. If a stock reports results this week, say so: a day trade is out by the
+   close, so it is not exposed to an after-hours result, but the next
+   morning's gap is.
+4. Hand off: `/trader-entry TICKER` for a stock the user wants to watch.
 
 ## Example: the reel
 
-Monday 2026-10-19, TSLA broke its opening range at 10:15 AM ET. The check at
-10:15 (Yahoo Finance's TSLA feed, 16 headlines since 8:00) leads with the
-morning's real stories: "Meta and Musk earnings and September pending home
-sales: What to Watch" (8:00, earnings), "Tesla-SpaceX Merger Mania Strikes
-Wall Street Ahead of Earnings" (8:04, earnings, deal), "Tech Stock Rebound
-Nudges US Equity Futures Mostly Higher Pre-Bell" (8:02, macro). The brief:
-"Tesla reports this week, so the stock can gap overnight; today's trade is
-in and out before the close. No new 8-K." At 10:52 the price line reads
-`TSLA 366.48 +3.31% vs yesterday's close 354.72 at 10:52 ET  MOVING`. When a
-ticker has no news, say so rather than padding the brief.
+RELIANCE, Thursday 29 October 2026 (real Google News items, `tests/fixtures/trader-news-india`):
 
-## What it never does
+```
+RELIANCE   1,167.40 +0.81% vs yesterday's close 1,158.00 at 15:29 IST
+  2026-10-29 04:40 IST  RELIANCE    The Times of India     On debut, Jio 2nd most valuable company, behind only parent Reliance Industries
+  2026-10-29 03:22 IST  RELIANCE    The Economic Times     Jio Platforms lists on NSE as 3,138th company, making Ambani family proud with a 21.36% surge
+  ...
+```
 
-- Never invents or embellishes a story, a quote or a number.
-- Never trades on news, and never tells the user to buy or sell because of a
-  headline.
-- Never hammers a server: one request per feed per ticker, a pause between
-  calls, and SEC's 10 requests a second limit stays far away.
+A headline that day also said the Q2 results were due on October 30: a
+reason to be flat by the close.
+
+## Rules
+
+- Headlines are leads, not facts. Never trade on a headline alone.
+- Never present a rumour, a "target price" or a tip as news the user should act on.
+- WhatsApp / Telegram "tips" and finfluencer calls are not sources. SEBI has
+  acted against unregistered tip providers; say so if the user brings one.
 
 ## Safety
 
-Education and tooling, not financial advice. This skill only reads and
-reports. Nothing places an order except `/trader-broker`, after
-`/trader-risk` passes and the user types an explicit yes for that order.
+- Education and tooling, not financial advice. This pack is not a SEBI-registered investment
+  adviser or research analyst, and a PASS is a rules check, not a recommendation.
+- SEBI's own studies: about 7 in 10 individual intraday traders in the equity cash segment lost
+  money in FY23, and 9 in 10 individual F&O traders lost money over FY22 to FY24. Say so when it matters.
+- Practice by default (`"paper": true`): nothing goes to a broker. Indian brokers have no paper
+  accounts; going live is the user's own decision, in their own config.
+- Nothing in this pack places an order except trader-broker, and only when all three hold:
+  trader-risk passed that exact order today, the user typed an explicit yes for that one order in
+  the chat, and, with a broker connector that can place orders, the user clicked Allow once on
+  Claude's own card for each call (tool permission "Needs approval", never "Always allow").
+  Without a connector the user places the order in their broker's app themselves.
+- No F&O, MTF / margin, short selling or leverage unless the config allows it and the user confirms.
+- Broker logins, API keys, access tokens, PINs and TOTPs never go in the chat.

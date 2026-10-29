@@ -1,22 +1,28 @@
 {
-  "name": "day-trader-skill",
-  "description": "11 Claude skills for day trading: scan thousands of charts, track breaking news, time every entry and exit, and replay every outcome before you risk a dollar.",
-  "version": "2.0.0",
+  "name": "day-trader-skill-india",
+  "description": "11 Claude skills for intraday trading on NSE (India): scan NIFTY charts, track Indian market news, time every entry and exit in IST, count STT and charges, check SEBI-style limits, and replay every outcome before you risk a rupee.",
+  "version": "1.0.0",
   "author": {
-    "name": "Jake Schincariol",
-    "url": "https://opusjake.ai"
+    "name": "Mahendra Soni",
+    "url": "https://github.com/msoni11"
   },
-  "homepage": "https://github.com/Jakeschincariol/day-trader-skill",
-  "repository": "https://github.com/Jakeschincariol/day-trader-skill",
+  "homepage": "https://github.com/msoni11/day-trader-skill",
+  "repository": "https://github.com/msoni11/day-trader-skill",
   "license": "MIT",
   "keywords": [
     "claude-code",
     "claude-skills",
     "day-trading",
+    "intraday",
+    "nse",
+    "bse",
+    "nifty",
+    "india",
     "stock-market",
     "backtesting",
     "opening-range-breakout",
-    "paper-trading"
+    "zerodha",
+    "kite"
   ],
   "skills": "./"
 }

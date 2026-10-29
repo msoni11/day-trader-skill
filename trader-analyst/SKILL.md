@@ -1,123 +1,83 @@
 ---
 name: trader-analyst
 description: >-
-  The Earnings Analyst. Reads a company's reported numbers straight from SEC
-  EDGAR (XBRL company facts from its 10-Qs and 10-Ks, plus the latest earnings
-  8-K and its press release) and sums up what changed: revenue, gross,
-  operating and net margins, net income and diluted EPS, quarter by quarter,
-  each against the same quarter a year earlier, with the trailing twelve
-  months. Reads an earnings call transcript when you paste one. Use when the
-  user says "how did Tesla's earnings look", "analyze the earnings", "what
-  changed this quarter", "is revenue growing", "check the 10-Q", "compare
-  margins", "sum up the call", "does it report this week", or before trading
-  a stock around its earnings.
-argument-hint: "[tickers]"
+  Earnings Analyst for NSE companies. Reads a company's quarterly results
+  (Yahoo Finance's fundamentals for .NS symbols) and sums up what changed:
+  revenue, gross, operating and net margins, net profit and diluted EPS in
+  Rs crore, quarter by quarter on Indian fiscal quarters (Q1 = April to June),
+  each against the same quarter a year earlier (YoY) and the quarter before
+  (QoQ), with the trailing twelve months. Reads a results press release,
+  investor presentation or earnings call transcript when you paste one. Use
+  when the user says "how did Reliance's results look", "analyze the
+  results", "what changed this quarter", "Q2 results", "is revenue growing",
+  "compare margins", "sum up the concall", "does it report this week", or
+  before trading a stock around its results.
+argument-hint: "[TICKER ...] [--quarters 8]"
 ---
 
 # trader-analyst
 
-Earnings move stocks more than anything else on the calendar, and the press
-release is written to put the best number first. This skill reads the numbers
-the company actually filed with the SEC, lines them up quarter by quarter, and
-says plainly what changed. For a day trader it answers two questions before a
-trade: what did the last report say, and is the next one inside this trade?
+Numbers first, story second. The Earnings Analyst lays out the reported
+numbers and what moved, and never says whether a stock is a buy.
 
-Tool in this folder (standard library Python, no keys):
+`${CLAUDE_SKILL_DIR}` below is this skill's folder (where this SKILL.md lives).
 
 ```bash
-python3 "${CLAUDE_SKILL_DIR}/facts.py" --help
+python3 "${CLAUDE_SKILL_DIR}/facts.py" RELIANCE
+python3 "${CLAUDE_SKILL_DIR}/facts.py" TCS INFY --quarters 8
+python3 "${CLAUDE_SKILL_DIR}/facts.py" HDFCBANK --json
+python3 "${CLAUDE_SKILL_DIR}/facts.py" RELIANCE TCS --metrics trader/metrics.json
 ```
 
-It needs the SEC User-Agent (`sec_user_agent` in `trader/config.json`, or
-`SEC_USER_AGENT`): "Your Name you@example.com" with the user's real name and
-email. It refuses to call SEC without one.
+## What to know
 
-## What it reads and writes
-
-- Reads `https://data.sec.gov/api/xbrl/companyfacts/CIK##########.json` (every
-  number the company has tagged in its filings), the company's submissions
-  list (for the newest 10-Q or 10-K and the newest 8-K with item 2.02,
-  "Results of Operations") and that 8-K's folder to find the press release
-  (the EX-99.1 exhibit).
-- Writes `trader/metrics.json` with `--metrics`: one row per company (TTM
-  revenue, net income and diluted EPS, the latest margins and growth), for
-  your notes or a spreadsheet. `metrics.example.json` in this folder is a
-  real run for AAPL, AXP, GOOGL, KO and BAC on 2026-10-13.
-- Earnings calls: the tool does not fetch transcripts. If the user pastes one
-  (or the company's IR page has it), read it and sum up what management said
-  changed: guidance, margins, demand, anything they declined to answer.
-- The next report date is not in SEC data. Look for it in `/trader-news`
-  headlines or on the company's investor relations page, and say where it
-  came from.
-
-## The rules
-
-- **Filed numbers first.** The table comes from XBRL facts the company filed.
-  Use the press release for context (guidance, segment colour), and say which
-  numbers came from where.
-- **Compare like with like.** Growth is against the same quarter a year
-  earlier. Quarter-on-quarter changes are shown but many businesses are
-  seasonal (Apple's December quarter is always its biggest).
-- **Say what is derived.** Companies do not file a Q4 10-Q. The fourth
-  quarter is the 10-K year minus the three quarters inside it and is marked
-  "derived"; derived EPS is approximate.
-- **Say when the data lags.** SEC's facts API can trail a filing. When the
-  newest 10-Q is later than the newest quarter in the facts, the tool prints a
-  NOTE with the link: read the 10-Q itself before summarising.
-- **Flag one-offs.** When net income is above operating income, gains outside
-  the business (investment marks, tax items) are inside it. The tool says so.
-  Banks and insurers have no gross margin: blank, not zero.
+- Source: Yahoo's fundamentals time series. Free and unofficial; it can lag
+  the exchange filing by days and sometimes misses a quarter (the tool says
+  which). The official numbers are in the results filing on nseindia.com /
+  bseindia.com and the investor presentation: say so, and check there before
+  leaning on a number.
+- Indian fiscal year: April to March. 30 June is Q1, 30 September Q2,
+  31 December Q3, 31 March Q4 (with the full year). FY27 = April 2026 to March 2027.
+- Consolidated vs standalone: Indian companies report both. Yahoo's line is
+  usually consolidated. Say which when it matters.
+- Banks and NBFCs: no gross margin; look at NII, NIM, GNPA / NNPA and credit
+  costs in the press release instead.
+- One-offs (an exceptional item, a stake sale) can swing net profit: read the
+  notes before calling a quarter strong or weak.
 
 ## Steps
 
-1. Run it for the companies in question (or the tickers on
-   `trader/watchlist.json`):
+1. Run `facts.py TICKER`. Lead with the newest quarter: revenue and profit
+   YoY, margin change, EPS. Then the trend.
+2. If the user pastes a press release, presentation or concall transcript,
+   summarise: guidance, segment numbers, management's own words on demand and
+   margins, and what changed from last quarter. Quote sparingly.
+3. Before a day trade: if results are due (check `/trader-news`), say the
+   stock can gap on them.
 
-   ```bash
-   python3 "${CLAUDE_SKILL_DIR}/facts.py" TSLA
-   python3 "${CLAUDE_SKILL_DIR}/facts.py" TSLA NVDA AMD --metrics trader/metrics.json
-   ```
+## Example: the reel
 
-   `--quarters 8` shows two years, `--json` everything machine-readable,
-   `--cik` a company without a ticker.
-2. Open the latest earnings press release (the EX-99 link) and the 10-Q when
-   the numbers need context, and read them.
-3. Write the summary: one line on the quarter (revenue, EPS, growth), one on
-   margins, one on anything unusual (a one-off, a derived quarter, data that
-   lags), and the links. Plain words, real numbers, no adjectives the numbers
-   do not support.
-4. If the next report falls inside the planned trade (an overnight hold, or a
-   report before the open), say it before `/trader-exit` sets the stop: a stop
-   does not protect against a gap, the stock can open past it.
-
-## Example: the reel's stock
-
-`facts.py TSLA` (run 2026-10-20): quarter ending 2026-06-30 (Q2 2026),
-revenue $28.24B, +25.5% against a year earlier, net income $1.11B (-4.9%),
-diluted EPS $0.32 (-3.0%); gross margin 16.8% (-4.3 points on the quarter
-before), operating margin 1.4%; last four quarters $103.6B revenue and $1.08
-EPS. The tool flags that net income is above operating income, so gains
-outside the business are inside it. Latest 10-Q filed 2026-07-23. Monday's
-headlines said Tesla reports this week, so the summary ends: "The next report
-is days away. A day trade that closes before the bell is not exposed to it;
-anything held overnight is."
-
-`facts.py AAPL` (2026-10-13): revenue $109.42B, +16.4% against a year
-earlier, diluted EPS $2.02 (+28.7%). For Coca-Cola the tool noted that SEC's
-facts stopped at 2026-04-03 while the 10-Q for 2026-07-03 was already filed,
-so the summary read that 10-Q directly.
-
-## What it never does
-
-- Never says a stock is cheap, expensive, a buy or a sell. It reports what
-  the company filed.
-- Never invents a number the filings do not have, or estimates a quarter it
-  cannot derive.
-- Never calls SEC without the User-Agent, and stays well under 10 requests a
-  second.
+```
+RELIANCE: quarterly results (Yahoo Finance; amounts in Rs crore)
+  quarter   ended         revenue      YoY      QoQ     profit      YoY  op mgn net mgn      EPS
+  Q1 FY27   2026-06-30    309,468   +27.0%    +5.2%     20,946   -22.4%   10.5%    6.8%    15.48
+  Q4 FY26   2026-03-31    294,059   +12.5%   +11.0%     16,971   -12.6%   10.0%    5.8%    12.54
+  ...
+  Yahoo has no numbers for Q2 FY26: growth that needs them is blank.
+```
 
 ## Safety
 
-Education and tooling, not financial advice. This skill only reads filings.
-Nothing places an order except `/trader-broker`, after `/trader-risk` passes
-and the user types an explicit yes for that order.
+- Education and tooling, not financial advice. This pack is not a SEBI-registered investment
+  adviser or research analyst, and a PASS is a rules check, not a recommendation.
+- SEBI's own studies: about 7 in 10 individual intraday traders in the equity cash segment lost
+  money in FY23, and 9 in 10 individual F&O traders lost money over FY22 to FY24. Say so when it matters.
+- Practice by default (`"paper": true`): nothing goes to a broker. Indian brokers have no paper
+  accounts; going live is the user's own decision, in their own config.
+- Nothing in this pack places an order except trader-broker, and only when all three hold:
+  trader-risk passed that exact order today, the user typed an explicit yes for that one order in
+  the chat, and, with a broker connector that can place orders, the user clicked Allow once on
+  Claude's own card for each call (tool permission "Needs approval", never "Always allow").
+  Without a connector the user places the order in their broker's app themselves.
+- No F&O, MTF / margin, short selling or leverage unless the config allows it and the user confirms.
+- Broker logins, API keys, access tokens, PINs and TOTPs never go in the chat.
